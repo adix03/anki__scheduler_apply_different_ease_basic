@@ -53,8 +53,8 @@ EASY  = lambda fct: max(1300, fct + 150)
 
 
 from anki.hooks import wrap
-from anki.sched import Scheduler
-
+from anki import version
+ANKI21 = version.startswith("2.1.")
 
 def default_ease_changes(fct, ease):
     if ease == 1:
@@ -95,8 +95,6 @@ def adjustedRescheduleLapse(self, card, _old):
     out = _old(self,card)
     card.factor = try_to_apply_custom_ease(fct,1)
     return out
-Scheduler._rescheduleLapse = wrap(Scheduler._rescheduleLapse, adjustedRescheduleLapse, "around")
-
 
 
 def adjustedRescheduleRev(self, card, ease, _old):
@@ -104,4 +102,20 @@ def adjustedRescheduleRev(self, card, ease, _old):
     _old(self, card, ease)
     if self._resched(card):
         card.factor = try_to_apply_custom_ease(fct,ease)
-Scheduler._rescheduleRev = wrap(Scheduler._rescheduleRev, adjustedRescheduleRev, "around")
+
+
+def adjustedRescheduleRev21(self, card, ease, early, _old):
+    fct = card.factor
+    _old(self, card, ease, early)
+    card.factor = try_to_apply_custom_ease(fct,ease)
+
+
+import anki.sched
+anki.sched.Scheduler._rescheduleLapse = wrap(anki.sched.Scheduler._rescheduleLapse, adjustedRescheduleLapse, "around")
+anki.sched.Scheduler._rescheduleRev = wrap(anki.sched.Scheduler._rescheduleRev, adjustedRescheduleRev, "around")
+
+if ANKI21:
+    import anki.schedv2
+    anki.schedv2.Scheduler._rescheduleLapse = wrap(anki.schedv2.Scheduler._rescheduleLapse, adjustedRescheduleLapse, "around")
+    anki.schedv2.Scheduler._rescheduleRev = wrap(anki.schedv2.Scheduler._rescheduleRev, adjustedRescheduleRev21, "around")
+    
